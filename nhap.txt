@@ -1,4 +1,1 @@
-https://sso.foxconn.com/Account/Login?ReturnUrl=%2Fconnect%2Fauthorize%3Fclient_id%3DBelieveWeb%26redirect_uri%3Dhttps%253A%252F%252Fcivetadmin.foxconn.com%252Fbelieveweb%252Findex.html%26response_type%3Dcode%26scope%3Dopenid%2Bprofile%2Bfoxconn%2Bicivet.BelieveApi.Web%26response_mode%3Dquery%26state%3D0000&ChangeUser=1
 
-
-Toan4100172.
