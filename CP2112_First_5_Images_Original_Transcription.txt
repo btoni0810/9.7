@@ -1,0 +1,233 @@
+Sub-BIN: cp2112_usb_scan-USB device scan for CP2112 SMBus/I2C Bridge
+Lupin Debug Flow - usb_reset_test_group-cp2112_detected-FAIL-MEASUREMENT
+
+Product: Lupin (LUPINE BF4) Fail: First phase of usb_reset_test_group -
+USB scan expects VID 10c4 / PID ea90 (Silicon Labs CP2112)
+
+Schematic: Page 110 - USB to I2C (CP2112); Page 106 - USB HUB DUT
+device: U122 (CP2112-FB3-GMR) Reset AND gate: U301 (SN74LVT08)
+
+Notes before starting - Bus / Device numbers in lsusb may vary by
+station. For this BIN, only ID 10c4:ea90 is required. - Do not treat DNP
+/ X / NA parts as populated (e.g. C8287, R3253). - I2C data bytes (0x89,
+0x89, 0x40, …) are read-modify-write and can differ by expander state /
+station. Prefer the logical set_io(bank, pin, data) mapping; use the
+exact I2C sequence from a known-good log on the same station when
+possible. - Open the mux path once before writing to expander 0x23: i2c
+-a 0 -d 1 /dev/mst/mtusb-1 w 0x72 0x0 0x0 i2c -a 0 -d 1 /dev/mst/mtusb-1
+w 0x77 0x0 0x2
+
+U301 / CP2112 logic (quick reference) - U301 = AND of S_MASTER_RST_A17_L
+and S_MASTER_RST_L -> S_AND_RST_L -> R3515 -> S_I2C_BRIDGE_RST_L -> U122
+RST* - Pin 4 HIGH (~3.3 V) -> CP2112 out of reset -> device present in
+lsusb - Pin 4 LOW (~0 V) -> CP2112 held in reset -> device absent - Test
+polarity: - MASTER_RST_L low -> CP2112 disappears; high -> reappears -
+MASTER_RST_A17 expander set_master_rst_17_high (data=1) -> CP2112
+disappears; set_master_rst_17_low (data=0) -> reappears
+
+============================================================
+
+Step 1 - Connect and power
+
+Connect the unit to the test station and power it on.
+
+============================================================ Step 2 -
+Run USB enumeration
+============================================================ Run: lsusb
+
+Example PASS output (Bus/Device numbers may vary): Bus 002 Device 003:
+ID 0bda:0411 Realtek Semiconductor Corp. Hub Bus 002 Device 002: ID
+0bda:0411 Realtek Semiconductor Corp. Hub Bus 002 Device 001: ID
+1d6b:0003 Linux Foundation 3.0 root hub Bus 001 Device 094: ID 10c4:ea90
+Silicon Labs CP2112 HID I2C Bridge Bus 001 Device 093: ID 0955:cf11
+NVIDIA Corp.
+
+Bus 001 Device 093: ID 0955:cf11 NVIDIA Corp. Bus 001 Device 092: ID
+0424:2514 Microchip Technology, Inc. (formerly SMSC) USB 2.0 Hub Bus 001
+Device 010: ID 0403:6001 Future Technology Devices International, Ltd
+FT232 Serial (UART) IC Bus 001 Device 006: ID 0000:0000 Bus 001 Device
+003: ID 0bda:5411 Realtek Semiconductor Corp. RTS5411 Hub Bus 001 Device
+007: ID 04ca:4141 Lite-On Technology Corp. Bus 001 Device 004: ID
+0461:3f41 Primax Electronics, Ltd Bus 001 Device 002: ID 0bda:5411
+Realtek Semiconductor Corp. RTS5411 Hub Bus 001 Device 008: ID 0abf:3370
+Diolan I2C/SPI Adapter - U2C-12 Bus 001 Device 001: ID 1d6b:0002 Linux
+Foundation 2.0 root hub
+
+Validation: Confirm expected USB devices are detected. For this fail,
+the critical line is CP2112.
+
+Quick check: lsusb -d 10c4:ea90
+
+============================================================ Step 3 -
+Confirm CP2112 is present
+============================================================ Verify this
+entry appears: ID 10c4:ea90 Silicon Labs CP2112 HID I2C Bridge
+
+If the CP2112 device is not detected, continue with the hardware checks
+below.
+
+============================================================ Step 4 -
+Inspect capacitors C8285 and C8286
+============================================================ Power
+decoupling for U122 (3V3_STBY). - Verify values match schematic / BOM. -
+Verify correct placement and assembly. - Inspect solder joints (open,
+insufficient solder, bridges, misalignment, damage). - Measure voltage
+on both capacitors.
+
+Expected Result: Approximately 3.3 V on C8285 and C8286.
+
+============================================================ Step 5 -
+Inspect resistor R2276
+============================================================ 3V3_STBY
+path to L_USB_I2C_VBUS (0 Ω). - Verify value matches schematic / BOM. -
+Verify placement and assembly. - Inspect solder joints. - Measure
+voltage on R2276.
+
+Expected Result: Approximately 3.3 V on R2276.
+
+============================================================ Step 6 -
+Inspect resistors R3330 and R3331
+============================================================ USB D+/D-
+series (0 Ω) between hub and U122. - Verify both are assembled and
+soldered correctly. - Confirm each is 0 Ω per schematic / BOM. - Check
+for missing parts, wrong placement, bridges, opens, or damage.
+
+Expected Result: R3330 and R3331 correctly assembled, approximately 0 Ω.
+
+============================================================ Step 7 -
+Inspect resistor R3515
+============================================================ Series path
+from U301 output (S_AND_RST_L) toward U122 reset (S_I2C_BRIDGE_RST_L). -
+Verify placement and assembly. - Inspect solder joints. - Confirm not
+missing, cracked, lifted, or wrongly installed.
+
+Expected Result: R3515 correctly assembled with good solder joints and
+no visible defects.
+
+Optional: also inspect C4306 (U301 decoupling) and C4263 (on reset path)
+if present on the BOM for this build.
+
+============================================================ Step 8 -
+Configure and validate U301 input / output states
+============================================================ Use
+/dev/mst/mtusb-1. Expanders: 0x23 (mux + MASTER_RST_L), 0x22
+(MASTER_RST_A17).
+
+  ------------------------------------------------------------
+  Step 8.1 - Open mux path and enable USB MUX
+  ------------------------------------------------------------
+  i2c -a 0 -d 1 /dev/mst/mtusb-1 w 0x72 0x0 0x0 i2c -a 0 -d 1
+  /dev/mst/mtusb-1 w 0x77 0x0 0x2
+
+  enable_usb_mux - set_io(0x1, 0x1, 0x0) on 0x23: i2c -a 1 -d
+  1 /dev/mst/mtusb-1 r 0x23 0x1 i2c -a 1 -d 1 /dev/mst/mtusb-1
+  w 0x23 0x5 0x0 i2c -a 1 -d 1 /dev/mst/mtusb-1 r 0x23 0xd i2c
+  -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0xd 0xfd
+
+  Wait 1 second.
+  ------------------------------------------------------------
+
+Step 8.2 - Set MASTER_RST_L high
+
+set_master_rst_l_high - set_io(0x0, 0x7, 0x1) on 0x23: i2c -a 1 -d 1
+/dev/mst/mtusb-1 r 0x23 0x0 i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0x4
+0x89 i2c -a 1 -d 1 /dev/mst/mtusb-1 r 0x23 0xc i2c -a 1 -d 1
+/dev/mst/mtusb-1 w 0x23 0xc 0x7e
+
+Wait 2 seconds.
+
+  ------------------------------------------------------------
+  Step 8.3 - Disable USB MUX
+  ------------------------------------------------------------
+  disable_usb_mux - set_io(0x1, 0x1, 0x1) on 0x23: i2c -a 1 -d
+  1 /dev/mst/mtusb-1 r 0x23 0x1 i2c -a 1 -d 1 /dev/mst/mtusb-1
+  w 0x23 0x5 0x2 i2c -a 1 -d 1 /dev/mst/mtusb-1 r 0x23 0xd i2c
+  -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0xd 0xfd
+
+  Wait 1 second.
+  ------------------------------------------------------------
+
+Step 8.4 - Set MASTER_RST_A17 high
+
+set_master_rst_17_high - set_io(0x0, 0x6, 0x1) on 0x22: i2c -a 1 -d 1
+/dev/mst/mtusb-1 r 0x22 0x0 i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x22 0x4
+0x40 i2c -a 1 -d 1 /dev/mst/mtusb-1 r 0x22 0xc i2c -a 1 -d 1
+/dev/mst/mtusb-1 w 0x22 0xc 0xbf
+
+Wait 1 second.
+
+Expected USB behavior: CP2112 should disappear from lsusb. lsusb -d
+10c4:ea90
+
+  ------------------------------------------------------------
+  Step 8.5 - Validate U301 high / low vs applied states
+  ------------------------------------------------------------
+  Measure U301 pin 4 and (recommended) U122 RST* /
+  S_I2C_BRIDGE_RST_L.
+
+  Condition | U301 pin 4 | CP2112 in lsusb Both resets
+  released (CP2112 should enumerate) | ~3.3 V | Present
+  (10c4:ea90) Reset asserted (MASTER_RST_L low OR
+  MASTER_RST_A17 high via expander) | ~0 V | Absent
+
+  Confirm the output follows the applied inputs.
+  ------------------------------------------------------------
+
+Step 8.6 - Reverse-state test (drive controls LOW / release A17)
+
+A. Open mux path and enable USB MUX
+
+i2c -a 0 -d 1 /dev/mst/mtusb-1 w 0x72 0x0 0x0 i2c -a 0 -d 1
+/dev/mst/mtusb-1 w 0x77 0x0 0x2
+
+enable_usb_mux - set_io(0x1, 0x1, 0x0): i2c -a 1 -d 1 /dev/mst/mtusb-1 r
+0x23 0x1 i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0x5 0x0 i2c -a 1 -d 1
+/dev/mst/mtusb-1 r 0x23 0xd i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0xd
+0xfd
+
+Wait 1 second.
+
+B. Set MASTER_RST_L low
+
+set_master_rst_l_low - set_io(0x0, 0x7, 0x0): i2c -a 1 -d 1
+/dev/mst/mtusb-1 r 0x23 0x0 i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0x4
+0x09 i2c -a 1 -d 1 /dev/mst/mtusb-1 r 0x23 0xc i2c -a 1 -d 1
+/dev/mst/mtusb-1 w 0x23 0xc 0x7e
+
+Wait 1 second.
+
+Expected: CP2112 absent; U301 pin 4 = 0 V.
+
+C. Set MASTER_RST_L high again, then disable USB MUX
+
+set_master_rst_l_high - set_io(0x0, 0x7, 0x1): i2c -a 1 -d 1
+/dev/mst/mtusb-1 r 0x23 0x0 i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0x4
+0x89 i2c -a 1 -d 1 /dev/mst/mtusb-1 r 0x23 0xc i2c -a 1 -d 1
+/dev/mst/mtusb-1 w 0x23 0xc 0x7e
+
+Wait 1 second.
+
+disable_usb_mux - set_io(0x1, 0x1, 0x1): i2c -a 1 -d 1 /dev/mst/mtusb-1
+r 0x23 0x1 i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0x5 0x2 i2c -a 1 -d 1
+/dev/mst/mtusb-1 r 0x23 0xd i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x23 0xd
+0xfd
+
+Wait 1 second.
+
+D. Set MASTER_RST_A17 low (release)
+
+set_master_rst_17_low - set_io(0x0, 0x6, 0x0) on 0x22: i2c -a 1 -d 1
+/dev/mst/mtusb-1 r 0x22 0x0 i2c -a 1 -d 1 /dev/mst/mtusb-1 w 0x22 0x4
+0x00 i2c -a 1 -d 1 /dev/mst/mtusb-1 r 0x22 0xc i2c -a 1 -d 1
+/dev/mst/mtusb-1 w 0x22 0xc 0xbf
+
+Wait 2 seconds.
+
+E. Validate low-to-high recovery - Measure U301 pin 4: expect ~3.3 V
+when resets are released. - Confirm CP2112 behavior: - After
+MASTER_RST_A17 high (set_master_rst_17_high): CP2112 gone - After
+MASTER_RST_A17 low (set_master_rst_17_low): CP2112 back
+
+lsusb # or lsusb -d 10c4:ea90
+
+Expected CP2112 entry: ID 10c4:ea90 Silicon Labs CP2112 HID I2C Bridge
