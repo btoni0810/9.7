@@ -1,1 +1,16 @@
 
+CUSTOMER DEBUG COOKBOOK
+CP2112 USB Detection Failure – Lupin (LUPINE BF4)
+1. Mục đích (Purpose)
+Xác định nguyên nhân khiến IC USB-to-I2C Bridge CP2112 không được hệ điều hành Linux nhận diện qua USB.
+DUT: U122 – CP2112-FB3-GMR.
+Reset AND Gate: U301 (SN74LVT08).
+USB Vendor ID (VID): 10C4.
+USB Product ID (PID): EA90.
+Expected device: Silicon Labs CP2112 HID I2C Bridge.
+Lỗi: USB scan không phát hiện CP2112.
+2. Điều kiện và lưu ý trước khi Debug
+Kết nối DUT với test station và cấp nguồn.
+Sử dụng Linux terminal.
+Xác định đúng I2C bus: /dev/mst/mtusb-1.
+Kiểm tra đúng địa chỉ I2C của các expander:
